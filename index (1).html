@@ -51,7 +51,7 @@
             height: 100vh;
             width: 100vw;
             font-family: 'Arial', sans-serif;
-            perspective: 800px;
+            perspective: 1000px;
             background-color: #000000;
             touch-action: none;
         }
@@ -63,46 +63,43 @@
             height: 100%;
             transform-style: preserve-3d;
             transition: transform 0.15s ease-out;
-            display: none; /* Ẩn ban đầu để hiển thị pháo hoa */
         }
-        #fireworksCanvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 10; /* Đảm bảo canvas pháo hoa ở trên cùng */
+        .falling-text, .heart, .rose {
+            position: absolute;
+            pointer-events: none;
+            transform-style: preserve-3d;
         }
         .falling-text {
-            position: absolute;
             color: #ff69b4;
             font-size: 5vw;
             white-space: nowrap;
-            pointer-events: none;
             opacity: 0.9;
-            transform-style: preserve-3d;
             text-shadow: 0 0 5px rgba(255, 105, 180, 0.8),
                          0 0 10px rgba(255, 105, 180, 0.6);
             animation: fadeInOut 2s infinite alternate;
         }
-        .heart, .rose {
-            position: absolute;
-            pointer-events: none;
-            opacity: 0.8;
-            transform-style: preserve-3d;
-            animation: float 4s infinite ease-in-out;
-        }
         .heart {
             color: #ff1493;
             font-size: 5vw;
+            opacity: 0.9;
             text-shadow: 0 0 3px #ff1493, 0 0 5px #ff1493;
+            animation: float 4s infinite ease-in-out;
         }
         .rose {
             color: #ff4040;
             font-size: 4vw;
+            opacity: 0.9;
             transform: rotate(45deg);
             text-shadow: 0 0 3px #ff4040, 0 0 5px #ff4040;
+            animation: float 4s infinite ease-in-out;
         }
+        /* Định nghĩa các lớp với độ sâu và kiểu khác nhau */
+        .layer-1 { transform: translateZ(-300px); opacity: 0.8; font-size: 3vw; }
+        .layer-2 { transform: translateZ(-150px); opacity: 0.85; font-size: 4vw; }
+        .layer-3 { transform: translateZ(0px); opacity: 0.9; font-size: 5vw; }
+        .layer-4 { transform: translateZ(150px); opacity: 0.95; font-size: 6vw; }
+        .layer-5 { transform: translateZ(300px); opacity: 1; font-size: 7vw; }
+
         @keyframes fadeInOut {
             from { opacity: 0.9; }
             to { opacity: 0.6; }
@@ -121,194 +118,53 @@
             .rose {
                 font-size: 5vw;
             }
+            .layer-1 { font-size: 4vw; }
+            .layer-2 { font-size: 5vw; }
+            .layer-3 { font-size: 6vw; }
+            .layer-4 { font-size: 7vw; }
+            .layer-5 { font-size: 8vw; }
         }
     </style>
 </head>
 <body>
-    <canvas id="fireworksCanvas"></canvas>
     <div id="scene"></div>
     <audio id="backgroundMusic" loop>
-        <source src="https://example.com/noi-nay-co-anh.mp3" type="audio/mpeg">
-        Trình duyệt của bạn không hỗ trợ thẻ âm thanh.
-    </audio>
-    <script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-            return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-            if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-                try {
-                    var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                    var firstSheetName = workbook.SheetNames[0];
-                    var worksheet = workbook.Sheets[firstSheetName];
-                    var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                    var filteredData = jsonData.filter(row => row.some(filledCell));
-                    var headerRowIndex = filteredData.findIndex((row, index) =>
-                        row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                    );
-                    if (headerRowIndex === -1 || headerRowIndex > 25) {
-                        headerRowIndex = 0;
-                    }
-                    var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
-                    csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                    return csv;
-                } catch (e) {
-                    console.error(e);
-                    return "";
-                }
-            }
-            return gk_fileData[filename] || "";
-        }
-    </script>
+  <source src="https://raw.githubusercontent.com/love-forever3/1911/main/hb.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+  document.addEventListener("click", () => {
+    const audio = document.getElementById("backgroundMusic");
+    if (audio && audio.paused) {
+      audio.play().catch(err => console.log("Không thể phát nhạc:", err));
+    }
+  });
+</script>
     <script>
-        // Hiệu ứng pháo hoa
-        const canvas = document.getElementById('fireworksCanvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        class Particle {
-            constructor(x, y, color) {
-                this.x = x;
-                this.y = y;
-                this.color = color;
-                this.radius = Math.random() * 3 + 1; // Kích thước hạt lớn hơn
-                this.velocity = {
-                    x: (Math.random() - 0.5) * 10, // Tăng tốc độ lan tỏa
-                    y: (Math.random() - 0.5) * 10
-                };
-                this.alpha = 1;
-                this.friction = 0.97; // Giảm ma sát để hạt di chuyển xa hơn
-                this.gravity = 0.02; // Thêm trọng lực nhẹ
-            }
-            draw() {
-                ctx.save();
-                ctx.globalAlpha = this.alpha;
-                ctx.shadowBlur = 10; // Thêm hiệu ứng sáng (glow)
-                ctx.shadowColor = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                ctx.fill();
-                ctx.closePath();
-                ctx.restore();
-            }
-            update() {
-                this.velocity.x *= this.friction;
-                this.velocity.y *= this.friction;
-                this.velocity.y += this.gravity; // Áp dụng trọng lực
-                this.x += this.velocity.x;
-                this.y += this.velocity.y;
-                this.alpha -= 0.015; // Mờ dần chậm hơn
-            }
-        }
-
-        class Firework {
-            constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = canvas.height;
-                this.sx = this.x;
-                this.sy = Math.random() * canvas.height / 2; // Nổ ở độ cao ngẫu nhiên
-                this.color = `hsl(${Math.random() * 360}, 100%, 60%)`; // Màu sắc rực rỡ
-                this.speed = Math.random() * 4 + 3; // Tốc độ bắn lên nhanh hơn
-                this.particles = [];
-                this.hasExploded = false;
-                this.trail = []; // Đuôi pháo hoa
-            }
-            update() {
-                if (!this.hasExploded) {
-                    this.y -= this.speed;
-                    this.trail.push({ x: this.x, y: this.y, alpha: 1 });
-                    if (this.trail.length > 10) this.trail.shift();
-                    if (this.y <= this.sy) {
-                        this.hasExploded = true;
-                        for (let i = 0; i < 50; i++) { // Tăng số hạt
-                            this.particles.push(new Particle(this.x, this.y, this.color));
-                        }
-                    }
-                } else {
-                    this.particles.forEach((particle, index) => {
-                        particle.update();
-                        if (particle.alpha <= 0) {
-                            this.particles.splice(index, 1);
-                        }
-                    });
-                }
-                this.trail.forEach(trail => trail.alpha -= 0.05);
-            }
-            draw() {
-                if (!this.hasExploded) {
-                    // Vẽ đuôi pháo hoa
-                    ctx.beginPath();
-                    ctx.moveTo(this.trail[0]?.x || this.x, this.trail[0]?.y || this.y);
-                    this.trail.forEach(point => {
-                        ctx.lineTo(point.x, point.y);
-                    });
-                    ctx.lineTo(this.x, this.y);
-                    ctx.strokeStyle = this.color;
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                    ctx.closePath();
-
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
-                    ctx.fillStyle = this.color;
-                    ctx.fill();
-                    ctx.closePath();
-                } else {
-                    this.particles.forEach(particle => particle.draw());
-                }
-            }
-        }
-
-        const fireworks = [];
-        function animateFireworks() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // Nền mờ nhẹ để tạo hiệu ứng pháo hoa
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            if (Math.random() < 0.1) { // Tăng tần suất pháo hoa
-                fireworks.push(new Firework());
-            }
-            fireworks.forEach((firework, index) => {
-                firework.update();
-                firework.draw();
-                if (firework.hasExploded && firework.particles.length === 0) {
-                    fireworks.splice(index, 1);
-                }
-            });
-            requestAnimationFrame(animateFireworks);
-        }
-        animateFireworks();
-
-        // Chuyển sang hiệu ứng chữ rơi sau 10 giây
-        setTimeout(() => {
-            canvas.style.display = 'none';
-            document.getElementById('scene').style.display = 'block';
-            audio.play().catch(err => console.log("Không thể phát tự động:", err));
-        }, 10000);
-
-        // Hiệu ứng chữ rơi
         const texts = [
-            "MÃI MÃI BÊN NHAU",
-            "LOVE U SO MUCH",
-            "6 YEAR ANNIVERSARY",
-            "♥TRƯƠNG KIỀU PHONG♥"
+            
+
+"chúc anh 19 - 11 luôn vui vẻ và hạnh phúc 😊",
+"mãi iu anh",
+"chúc anh 19 - 11 luôn vui vẻ và hạnh phúc 😊",
+"mãi iu anh",
+                "chúc anh 19 - 11 luôn vui vẻ và hạnh phúc 😊",
+"mãi iu anh",
+                "chúc anh 19 - 11 luôn vui vẻ và hạnh phúc 😊",
+"mãi iu anh",
+                "chúc anh 19 - 11 luôn vui vẻ và hạnh phúc 😊",
+"mãi iu anh",
         ];
 
         const scene = document.getElementById("scene");
         const audio = document.getElementById("backgroundMusic");
         let rotateX = 0, rotateY = 0;
+        let targetRotateX = 0, targetRotateY = 0;
         let lastTouchX = 0, lastTouchY = 0;
         let lastMouseX = 0, lastMouseY = 0;
-        const maxTexts = 10;
+        let isDragging = false;
+        const maxTexts = 15;
         let activeTexts = [];
-        let resetRotation = false;
-
-        function lerp(start, end, t) {
-            return start + (end - start) * t;
-        }
 
         function checkCollision(newX, newY, newWidth, newHeight) {
             for (let text of activeTexts) {
@@ -325,7 +181,10 @@
             e.preventDefault();
             lastTouchX = e.touches[0].clientX;
             lastTouchY = e.touches[0].clientY;
-            resetRotation = false;
+            isDragging = true;
+            if (audio.paused) {
+                audio.play().catch(err => console.log("Không thể phát tự động:", err));
+            }
         }, { passive: false });
 
         document.addEventListener("touchmove", (e) => {
@@ -336,30 +195,32 @@
             const deltaX = (touchX - lastTouchX) * 0.5;
             const deltaY = (touchY - lastTouchY) * 0.5;
 
-            rotateY += deltaX;
-            rotateX -= deltaY;
+            targetRotateY += deltaX;
+            targetRotateX -= deltaY;
 
             lastTouchX = touchX;
             lastTouchY = touchY;
         }, { passive: false });
 
         document.addEventListener("touchend", () => {
-            resetRotation = true;
+            isDragging = false;
+            targetRotateX = 0;
+            targetRotateY = 0;
         });
 
         document.addEventListener("mousedown", (e) => {
             lastMouseX = e.clientX;
             lastMouseY = e.clientY;
-            resetRotation = false;
+            isDragging = true;
         });
 
         document.addEventListener("mousemove", (e) => {
-            if (e.buttons === 1) {
+            if (isDragging) {
                 const deltaX = (e.clientX - lastMouseX) * 0.5;
                 const deltaY = (e.clientY - lastMouseY) * 0.5;
 
-                rotateY += deltaX;
-                rotateX += deltaY;
+                targetRotateY += deltaX;
+                targetRotateX += deltaY;
 
                 lastMouseX = e.clientX;
                 lastMouseY = e.clientY;
@@ -367,23 +228,23 @@
         });
 
         document.addEventListener("mouseup", () => {
-            resetRotation = true;
+            isDragging = false;
+            targetRotateX = 0;
+            targetRotateY = 0;
         });
 
         function updateRotation() {
-            if (resetRotation) {
-                rotateX = lerp(rotateX, 0, 0.1);
-                rotateY = lerp(rotateY, 0, 0.1);
-                if (Math.abs(rotateX) < 0.1 && Math.abs(rotateY) < 0.1) {
-                    rotateX = 0;
-                    rotateY = 0;
-                    resetRotation = false;
-                }
-            }
+            rotateX += (targetRotateX - rotateX) * 0.1;
+            rotateY += (targetRotateY - rotateY) * 0.1;
             scene.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
             requestAnimationFrame(updateRotation);
         }
         updateRotation();
+
+        function getRandomLayer() {
+            const layers = ['layer-1', 'layer-2', 'layer-3', 'layer-4', 'layer-5'];
+            return layers[Math.floor(Math.random() * layers.length)];
+        }
 
         function createFallingText(initial = false) {
             if (activeTexts.length >= maxTexts) return;
@@ -392,7 +253,7 @@
             text.className = "falling-text";
             text.innerText = texts[Math.floor(Math.random() * texts.length)];
             
-            let startX, startY, zLayer;
+            let startX, startY;
             const textWidth = text.offsetWidth || 200;
             const textHeight = text.offsetHeight || 50;
             let attempts = 0;
@@ -401,7 +262,6 @@
             do {
                 startX = Math.random() * (window.innerWidth - textWidth);
                 startY = initial ? Math.random() * (window.innerHeight - textHeight) : -50;
-                zLayer = Math.random() * 300 - 150;
                 attempts++;
             } while (checkCollision(startX, startY, textWidth, textHeight) && attempts < maxAttempts);
 
@@ -410,11 +270,11 @@
                 startY = -50;
             }
 
+            const layerClass = getRandomLayer();
+            text.classList.add(layerClass);
             text.style.left = startX + "px";
             text.style.top = startY + "px";
-            text.style.transform = `translateZ(${zLayer}px)`;
             text.style.color = `hsl(${Math.random() * 360}, 80%, 70%)`;
-            text.style.fontSize = `${Math.random() * 2 + 3}vw`;
 
             scene.appendChild(text);
             activeTexts.push(text);
@@ -437,32 +297,35 @@
         }
 
         function createHeart(initial = false) {
-            const heart = document.createElement("div");
-            heart.className = "heart";
-            heart.innerText = "♥";
+            const layers = ['layer-1', 'layer-2', 'layer-3', 'layer-4', 'layer-5'];
             
-            const startX = Math.random() * window.innerWidth;
-            const zLayer = Math.random() * 300 - 150;
-            heart.style.left = startX + "px";
-            heart.style.top = initial ? (Math.random() * window.innerHeight) + "px" : "-50px";
-            heart.style.transform = `translateZ(${zLayer}px)`;
+            layers.forEach(layerClass => {
+                const heart = document.createElement("div");
+                heart.className = "heart";
+                heart.innerText = "♥";
+                
+                const startX = Math.random() * window.innerWidth;
+                heart.classList.add(layerClass);
+                heart.style.left = startX + "px";
+                heart.style.top = initial ? (Math.random() * window.innerHeight) + "px" : "-50px";
 
-            scene.appendChild(heart);
+                scene.appendChild(heart);
 
-            let posY = initial ? parseFloat(heart.style.top) : -50;
-            const speed = Math.random() * 0.8 + 0.4;
+                let posY = initial ? parseFloat(heart.style.top) : -50;
+                const speed = Math.random() * 0.8 + 0.4;
 
-            function animateHeart() {
-                posY += speed;
-                heart.style.top = posY + "px";
+                function animateHeart() {
+                    posY += speed;
+                    heart.style.top = posY + "px";
 
-                if (posY > window.innerHeight + 50) {
-                    heart.remove();
-                } else {
-                    requestAnimationFrame(animateHeart);
+                    if (posY > window.innerHeight + 50) {
+                        heart.remove();
+                    } else {
+                        requestAnimationFrame(animateHeart);
+                    }
                 }
-            }
-            animateHeart();
+                animateHeart();
+            });
         }
 
         function createRose(initial = false) {
@@ -471,10 +334,10 @@
             rose.innerText = "♥";
             
             const startX = Math.random() * window.innerWidth;
-            const zLayer = Math.random() * 300 - 150;
+            const layerClass = getRandomLayer();
+            rose.classList.add(layerClass);
             rose.style.left = startX + "px";
             rose.style.top = initial ? (Math.random() * window.innerHeight) + "px" : "-50px";
-            rose.style.transform = `translateZ(${zLayer}px) rotate(${Math.random() * 360}deg)`;
 
             scene.appendChild(rose);
 
@@ -494,22 +357,19 @@
             animateRose();
         }
 
-        // Khởi tạo chữ rơi, trái tim, hoa hồng sau 10 giây
-        setTimeout(() => {
-            for (let i = 0; i < 6; i++) {
-                createFallingText(true);
-            }
-            for (let i = 0; i < 5; i++) {
-                createHeart(true);
-            }
-            for (let i = 0; i < 4; i++) {
-                createRose(true);
-            }
+        for (let i = 0; i < 8; i++) {
+            createFallingText(true);
+        }
+        for (let i = 0; i < 2; i++) {
+            createHeart(true);
+        }
+        for (let i = 0; i < 5; i++) {
+            createRose(true);
+        }
 
-            setInterval(createFallingText, 600);
-            setInterval(createHeart, 600);
-            setInterval(createRose, 800);
-        }, 10000);
+        setInterval(createFallingText, 500);
+        setInterval(createHeart, 1500);
+        setInterval(createRose, 700);
     </script>
 </body>
 </html>
